@@ -11,3 +11,5 @@ void MoveUp();
 void MoveRight();
 
 void MoveDown();
+
+void MoveGhosts();

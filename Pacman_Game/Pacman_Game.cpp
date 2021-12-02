@@ -148,13 +148,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+    case WM_CREATE:
+        SetTimer(hWnd, 1, 500, 0);
+        srand(GetTickCount64());
+        break;
+    case WM_TIMER:
+        MoveGhosts();
+        InvalidateRect(hWnd, NULL, TRUE);
+        break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            //char const* binary = "1111";
-            //wchar_t* path;
-            //GetModuleFileName(NULL, path, 1000);
             DrawMap(hdc);
             EndPaint(hWnd, &ps);
         }
