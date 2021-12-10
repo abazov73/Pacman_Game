@@ -18,11 +18,7 @@
 #define RIGHT 2
 #define DOWN 3
 #define LEFT 4
-
-int Ghost1Direction = RIGHT;
-int Ghost2Direction = UP;
-int Ghost3Direction = UP;
-int Ghost4Direction = LEFT;
+#define STOP 0
 
 int map[HEIGHT][WIDTH] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -49,6 +45,18 @@ int map[HEIGHT][WIDTH] = {
 //выход для монстров - (5;9) и (5;10)
 //блокировать движение вниз для игрока - (4;9) и (4;10)
 
+struct Ghost {
+	int number;
+	int direction;
+};
+
+Ghost ghost1 = { 1, RIGHT };
+Ghost ghost2 = { 2, UP };
+Ghost ghost3 = { 3, UP };
+Ghost ghost4 = { 4, LEFT };
+
+Ghost ghosts[4] = { ghost1, ghost2, ghost3, ghost4 };
+
 int objectSizeX = 50;
 int objectSizeY = 50;
 
@@ -61,7 +69,13 @@ void DrawMap(HDC hdc) {
 
 	HBRUSH hBrushPlayer = CreateSolidBrush(RGB(255, 255, 0)); // кисть игрока - желтый
 
-	HBRUSH hBrushEnemy = CreateSolidBrush(RGB(100, 0, 255)); // кисть врагов - фиолетовый
+	HBRUSH hBrushEnemy1 = CreateSolidBrush(RGB(255, 0, 0)); // кисть призрака №1 - красный 
+	
+	HBRUSH hBrushEnemy2 = CreateSolidBrush(RGB(128, 166, 255));
+
+	HBRUSH hBrushEnemy3 = CreateSolidBrush(RGB(255, 128, 0));
+
+	HBRUSH hBrushEnemy4 = CreateSolidBrush(RGB(0xFF, 0xC0, 0xCB));
 
 	HBRUSH hBrushFood = CreateSolidBrush(RGB(246, 138, 0)); // кисть еды - оранжевый
 
@@ -85,11 +99,29 @@ void DrawMap(HDC hdc) {
 				FillRect(hdc, &object, hBrushEmpty);
 				FillRect(hdc, &movingObject, hBrushPlayer);
 			}
-			else if (map[i][j] == ENEMY1 || map[i][j] == ENEMY2 || map[i][j] == ENEMY3 || map[i][j] == ENEMY4) { // Враг
+			else if (map[i][j] == ENEMY1) { // Враг
 				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
 							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
 				FillRect(hdc, &object, hBrushEmpty);
-				FillRect(hdc, &movingObject, hBrushEnemy);
+				FillRect(hdc, &movingObject, hBrushEnemy1);
+			}
+			else if (map[i][j] == ENEMY2) {
+				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
+							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
+				FillRect(hdc, &object, hBrushEmpty);
+				FillRect(hdc, &movingObject, hBrushEnemy2);
+			}
+			else if (map[i][j] == ENEMY3) {
+				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
+							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
+				FillRect(hdc, &object, hBrushEmpty);
+				FillRect(hdc, &movingObject, hBrushEnemy3);
+			}
+			else if (map[i][j] == ENEMY4) {
+				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
+							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
+				FillRect(hdc, &object, hBrushEmpty);
+				FillRect(hdc, &movingObject, hBrushEnemy4);
 			}
 			else if (map[i][j] == FOOD) { // Еда
 				RECT food = { j * objectSizeX + 20, i * objectSizeY + 20,
@@ -101,6 +133,15 @@ void DrawMap(HDC hdc) {
 		}
 		i++;
 	}
+	DeleteObject(hBrushEmpty);
+	DeleteObject(hBrushWall);
+	DeleteObject(hBrushPlayer);
+	DeleteObject(hBrushEnemy1);
+	DeleteObject(hBrushEnemy2);
+	DeleteObject(hBrushEnemy3);
+	DeleteObject(hBrushEnemy4);
+	DeleteObject(hBrushFood);
+
 }
 
 void MoveLeft() {
@@ -195,45 +236,49 @@ void ChangeGhostDirection(int ghostNum, int direction, int i, int j) {
 	int randomNum = rand() % 2;
 	switch (direction) {
 	case UP:
-		if (map[i][j - 1] != WALL && map[i][j + 1] != WALL && map[i][j - 1] < 4 && map[i][j - 1] > 4) {
+		if (map[i][j - 1] > -1 && map[i][j + 1] > 0 && map[i][j - 1] != WALL && map[i][j + 1] != WALL && map[i][j - 1] < 4 && map[i][j + 1] < 4) { //фикисить по этому образцу
 			randomNum = rand() % 2;
 			if (randomNum == 0) direction = LEFT;
 			else direction = RIGHT;
 		}
-		else if (map[i][j + 1] != WALL && map[i][j + 1] < 4) direction = RIGHT;
-		else if (map[i][j - 1] != WALL && map[i][j - 1] < 4) direction = LEFT;
-		else direction = DOWN;
+		else if (map[i][j + 1] > -1 && map[i][j + 1] != WALL && map[i][j + 1] < 4) direction = RIGHT;
+		else if (map[i][j - 1] > -1 && map[i][j - 1] != WALL && map[i][j - 1] < 4) direction = LEFT;
+		else if (map[i + 1][j] > -1 && map[i + 1][j] != WALL && map[i + 1][j] < 4) direction = DOWN;
+		else direction = STOP;
 		break;
 	case RIGHT:
-		if (map[i - 1][j] != WALL && map[i + 1][j] != WALL && map[i - 1][j] < 4 && map[i - 1][j] > 4) {
+		if (map[i - 1][j] > -1 && map[i + 1][j] > -1 && map[i - 1][j] != WALL && map[i + 1][j] != WALL && map[i - 1][j] < 4 && map[i + 1][j] < 4) {
 			randomNum = rand() % 2;
 			if (randomNum == 0) direction = UP;
 			else if (map[i + 1][j] != WALL && map[i + 1][j] < 4) direction = DOWN;
 			else direction = UP;
 		}
-		else if (map[i + 1][j] != WALL && map[i + 1][j] < 4) direction = DOWN;
-		else if (map[i - 1][j] != WALL && map[i - 1][j] < 4) direction = UP;
-		else direction = LEFT;
+		else if (map[i + 1][j] > -1 && map[i + 1][j] != WALL && map[i + 1][j] < 4) direction = DOWN;
+		else if (map[i - 1][j] > -1 && map[i - 1][j] != WALL && map[i - 1][j] < 4) direction = UP;
+		else if (map[i][j - 1] > -1 && map[i][j - 1] != WALL && map[i][j - 1] < 4) direction = LEFT;
+		else STOP;
 		break;
 	case DOWN:
-		if (map[i][j + 1] != WALL && map[i][j - 1] != WALL && map[i][j + 1] < 4 && map[i][j + 1] > 4) {
+		if (map[i][j + 1] > -1 && map[i][j - 1] > -1 && map[i][j + 1] != WALL && map[i][j - 1] != WALL && map[i][j - 1] < 4 && map[i][j + 1] < 4) {
 			randomNum = rand() % 2;
 			if (randomNum == 0) direction = RIGHT;
 			else direction = LEFT;
 		}
-		else if (map[i][j - 1] != WALL && map[i][j - 1] < 4) direction = LEFT;
-		else if (map[i][j + 1] != WALL && map[i][j + 1] < 4) direction = RIGHT;
-		else direction = UP;
+		else if (map[i][j - 1] > -1 && map[i][j - 1] != WALL && map[i][j - 1] < 4) direction = LEFT;
+		else if (map[i][j + 1] > -1 && map[i][j + 1] != WALL && map[i][j + 1] < 4) direction = RIGHT;
+		else if (map[i - 1][j] > -1 && map[i - 1][j] != WALL && map[i - 1][j] < 4) direction = UP;
+		else STOP;
 		break;
 	case LEFT:
-		if (map[i + 1][j] != WALL && map[i - 1][j] != WALL && map[i + 1][j] < 4 && map[i + 1][j] > 4) {
+		if (map[i + 1][j] > -1 && map[i - 1][j] > -1 && map[i + 1][j] != WALL && map[i - 1][j] != WALL && map[i - 1][j] < 4 && map[i + 1][j] < 4) {
 			randomNum = rand() % 2;
 			if (randomNum == 0) direction = DOWN;
 			else direction = UP;
 		}
-		else if (map[i - 1][j] != WALL && map[i - 1][j] < 4) direction = UP;
-		else if (map[i + 1][j] != WALL && map[i + 1][j] < 4) direction = DOWN;
-		else direction = RIGHT;
+		else if (map[i - 1][j] > -1 && map[i - 1][j] != WALL && map[i - 1][j] < 4) direction = UP;
+		else if (map[i + 1][j] > -1 && map[i + 1][j] != WALL && map[i + 1][j] < 4) direction = DOWN;
+		else if (map[i][j + 1] > -1 && map[i][j + 1] != WALL && map[i][j + 1] < 4) direction = RIGHT;
+		else STOP;
 		break;
 	}
 	
@@ -255,202 +300,84 @@ void ChangeGhostDirection(int ghostNum, int direction, int i, int j) {
 		map[i][j - 1] = -1 * ghostNum;
 		map[i][j] = EMPTY;
 		break;
+	case STOP:
+		break;
 	}
 
-	switch (ghostNum) {
-	case 4:
-		Ghost1Direction = direction;
-		break;
-	case 5:
-		Ghost2Direction = direction;
-		break;
-	case 6:
-		Ghost3Direction = direction;
-		break;
-	case 7:
-		Ghost4Direction = direction;
-		break;
-	}
+	ghosts[ghostNum - 4].direction = direction;
 }
+
 
 void MoveGhosts() {
 	int i = 0;
 	while (i < HEIGHT) {
 		int j = 0;
 		while (j < WIDTH) {
-			if (map[i][j] == ENEMY1) {
-				if ((i == 5 && j == 9) || (i == 5 && j == 10)) Ghost1Direction = UP;
-				int randNum = rand() % 2;
-				if (i == 7 && j > 2 && randNum == 1 && map[i + 1][j] != WALL && !((i == 5 && j == 9) || (i == 5 && j == 10)) && !((i == 4 && j == 9) || (i == 4 && j == 10))) {
-					map[i + 1][j] = ENEMY1;
+			if (map[i][j] > 3 && map[i][j] < 8) {
+				int ghostNum = map[i][j];
+				if ((i == 5 && j == 9) || (i == 5 && j == 10)) ghosts[ghostNum - 4].direction = UP;
+				int randNum = rand() % 3;
+				if (i == 7 && j > 2 && randNum == 1 && map[i + 1][j] != WALL && map[i + 1][j] > -1 && map[i + 1][j] < 4 && !((i == 5 && j == 9) || (i == 5 && j == 10)) && !((i == 4 && j == 9) || (i == 4 && j == 10))) {
+					map[i + 1][j] = -1 * ghostNum;
 					map[i][j] = EMPTY;
+					ghosts[ghostNum - 4].direction = DOWN;
+				}
+				else if (i == 7 && j > 2 && randNum == 0 && map[i][j + 1] != WALL && map[i][j + 1] > -1 && map[i][j + 1] < 4 && !((i == 5 && j == 9) || (i == 5 && j == 10)) && !((i == 4 && j == 9) || (i == 4 && j == 10))) {
+					map[i][j + 1] = -1 * ghostNum;
+					map[i][j] = EMPTY;
+					ghosts[ghostNum - 4].direction = RIGHT;
 				}
 				else {
-					switch (Ghost1Direction) {
+					switch (ghosts[ghostNum - 4].direction) {
 					case UP:
-						if (map[i - 1][j] == WALL || map[i-1][j] >= 4) ChangeGhostDirection(4, UP, i, j);
+						if (map[i - 1][j] == WALL || map[i-1][j] >= 4 || map[i - 1][j] < 0) ChangeGhostDirection(ghostNum, UP, i, j);
 						else {
-							map[i - 1][j] = -1 * ENEMY1;
+							map[i - 1][j] = -1 * ghostNum;
 							map[i][j] = EMPTY;
 						}
 						break;
 
 					case RIGHT:
-						if (map[i][j + 1] == WALL || map[i][j + 1] >= 4) ChangeGhostDirection(4, RIGHT, i, j);
+						if (map[i][j + 1] == WALL || map[i][j + 1] >= 4 || map[i][j + 1] < 0) ChangeGhostDirection(ghostNum, RIGHT, i, j);
 						else {
-							map[i][j + 1] = -1 * ENEMY1;
+							map[i][j + 1] = -1 * ghostNum;
 							map[i][j] = EMPTY;
 						}
 						break;
 
+
 					case DOWN:
-						if (map[i + 1][j] == WALL || map[i + 1][j] >= 4) ChangeGhostDirection(4, DOWN, i, j);
+						if (map[i + 1][j] == WALL || map[i + 1][j] >= 4 || map[i + 1][j] < 0) ChangeGhostDirection(ghostNum, DOWN, i, j);
 						else {
-							map[i + 1][j] = -1 * ENEMY1;
+							map[i + 1][j] = -1 * ghostNum;
 							map[i][j] = EMPTY;
 						}
 						break;
 
 					case LEFT:
-						if (map[i][j - 1] == WALL || map[i][j-1] >= 4) ChangeGhostDirection(4, LEFT, i, j);
+						if (map[i][j - 1] == WALL || map[i][j-1] >= 4 || map[i][j - 1] < 0) ChangeGhostDirection(ghostNum, LEFT, i, j);
 						else {
-							map[i][j - 1] = -1 * ENEMY1;
+							map[i][j - 1] = -1 * ghostNum;
 							map[i][j] = EMPTY;
 						}
 						break;
-
-					}
-				}
-			}
-			if (map[i][j] == ENEMY2) {
-				if ((i == 5 && j == 9) || (i == 5 && j == 10)) Ghost2Direction = UP;
-				int randNum = rand() % 2;
-				if (i == 7 && j > 2 && randNum == 1 && map[i + 1][j] != WALL && !((i == 5 && j == 9) || (i == 5 && j == 10)) && !((i == 4 && j == 9) || (i == 4 && j == 10))) {
-					map[i + 1][j] = ENEMY2;
-					map[i][j] = EMPTY;
-				}
-				else {
-					switch (Ghost2Direction) {
-					case UP:
-						if (map[i - 1][j] == WALL || map[i - 1][j] >= 4) ChangeGhostDirection(5, UP, i, j);
-						else {
-							map[i - 1][j] = -1 * ENEMY2;
-							map[i][j] = EMPTY;
+					case STOP:
+						if (map[i - 1][j] == EMPTY || map[i - 1][j] == FOOD) {
+							map[i - 1][j] = -1 * ghostNum;
+							ghosts[ghostNum - 4].direction = UP;
 						}
-						break;
-
-					case RIGHT:
-						if (map[i][j + 1] == WALL || map[i][j+1] >= 4) ChangeGhostDirection(5, RIGHT, i, j);
-						else {
-							map[i][j + 1] = -1 * ENEMY2;
-							map[i][j] = EMPTY;
+						else if (map[i][j + 1] == EMPTY || map[i][j + 1] == FOOD) {
+							map[i][j + 1] = -1 * ghostNum;
+							ghosts[ghostNum - 4].direction = RIGHT;
 						}
-						break;
-
-					case DOWN:
-						if (map[i + 1][j] == WALL || map[i + 1][j] >= 4) ChangeGhostDirection(5, DOWN, i, j);
-						else {
-							map[i + 1][j] = -1 * ENEMY2;
-							map[i][j] = EMPTY;
+						else if (map[i + 1][j] == EMPTY || map[i + 1][j] == FOOD) {
+							map[i + 1][j] = -1 * ghostNum;
+							ghosts[ghostNum - 4].direction = DOWN;
 						}
-						break;
-
-					case LEFT:
-						if (map[i][j - 1] == WALL || map[i][j-1] >= 4) ChangeGhostDirection(5, LEFT, i, j);
-						else {
-							map[i][j - 1] = -1 * ENEMY2;
-							map[i][j] = EMPTY;
+						else if (map[i][j - 1] == EMPTY || map[i][j - 1] == FOOD) {
+							map[i][j - 1] = -1 * ghostNum;
+							ghosts[ghostNum - 4].direction = LEFT;
 						}
-						break;
-
-					}
-				}
-			}
-			if (map[i][j] == ENEMY3) {
-				if ((i == 5 && j == 9) || (i == 5 && j == 10)) Ghost3Direction = UP;
-				int randNum = rand() % 2;
-				if (i == 7 && j > 2 && randNum == 1 && map[i + 1][j] != WALL && !((i == 5 && j == 9) || (i == 5 && j == 10)) && !((i == 4 && j == 9) || (i == 4 && j == 10))) {
-					map[i + 1][j] = ENEMY3;
-					map[i][j] = EMPTY;
-				}
-				else {
-					switch (Ghost3Direction) {
-					case UP:
-						if (map[i - 1][j] == WALL || map[i - 1][j] >= 4) ChangeGhostDirection(6, UP, i, j);
-						else {
-							map[i - 1][j] = -1 * ENEMY3;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					case RIGHT:
-						if (map[i][j + 1] == WALL || map[i][j+1] >= 4) ChangeGhostDirection(6, RIGHT, i, j);
-						else {
-							map[i][j + 1] = -1 * ENEMY3;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					case DOWN:
-						if (map[i + 1][j] == WALL || map[i + 1][j] >= 4) ChangeGhostDirection(6, DOWN, i, j);
-						else {
-							map[i + 1][j] = -1 * ENEMY3;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					case LEFT:
-						if (map[i][j - 1] == WALL || map[i][j-1] >= 4) ChangeGhostDirection(6, LEFT, i, j);
-						else {
-							map[i][j - 1] = -1 * ENEMY3;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					}
-				}
-			}
-			if (map[i][j] == ENEMY4) {
-				if ((i == 5 && j == 9) || (i == 5 && j == 10)) Ghost4Direction = UP;
-				int randNum = rand() % 2;
-				if (i == 7 && j > 2 && randNum == 1 && map[i + 1][j] != WALL && !((i == 5 && j == 9) || (i == 5 && j == 10)) && !((i == 4 && j == 9) || (i == 4 && j == 10))) {
-					map[i + 1][j] = ENEMY1;
-					map[i][j] = EMPTY;
-				}
-				else {
-					switch (Ghost4Direction) {
-					case UP:
-						if (map[i - 1][j] == WALL || map[i - 1][j] >= 4) ChangeGhostDirection(7, UP, i, j);
-						else {
-							map[i - 1][j] = -1 * ENEMY4;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					case RIGHT:
-						if (map[i][j + 1] == WALL || map[i][j+1] >= 4) ChangeGhostDirection(7, RIGHT, i, j);
-						else {
-							map[i][j + 1] = -1 * ENEMY4;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					case DOWN:
-						if (map[i + 1][j] == WALL || map[i + 1][j] >= 4) ChangeGhostDirection(7, DOWN, i, j);
-						else {
-							map[i + 1][j] = -1 * ENEMY4;
-							map[i][j] = EMPTY;
-						}
-						break;
-
-					case LEFT:
-						if (map[i][j - 1] == WALL || map[i][j-1] >= 4) ChangeGhostDirection(7, LEFT, i, j);
-						else {
-							map[i][j - 1] = -1 * ENEMY4;
-							map[i][j] = EMPTY;
-						}
-						break;
-
 					}
 				}
 			}

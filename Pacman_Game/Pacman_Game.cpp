@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_CREATE:
-        SetTimer(hWnd, 1, 500, 0);
+        SetTimer(hWnd, 1, 100, 0);
         srand(GetTickCount64());
         break;
     case WM_TIMER:
