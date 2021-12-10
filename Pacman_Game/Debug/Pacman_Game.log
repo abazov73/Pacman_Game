@@ -1,3 +1,5 @@
-﻿  Pacman_Game.cpp
+﻿  Game.cpp
+  Pacman_Game.cpp
 C:\Users\User\source\repos\Pacman_Game\Pacman_Game\Pacman_Game.cpp(153,29): warning C4244: аргумент: преобразование "ULONGLONG" в "unsigned int", возможна потеря данных
+  Создание кода...
   Pacman_Game.vcxproj -> C:\Users\User\source\repos\Pacman_Game\Debug\Pacman_Game.exe
