@@ -4,12 +4,26 @@
 
 void DrawMap(HDC hdc);
 
-void MoveLeft();
-
-void MoveUp();
-
-void MoveRight();
-
-void MoveDown();
-
 void MoveGhosts();
+
+void movePlayer();
+
+void tryChangePlayerDirection();
+
+void setNextDirection(int nextDirection);
+
+void saveGame();
+
+void loadGame();
+
+void drawMenu(HDC hdc);
+
+void savePlayerName(char* name);
+
+void scanForPlayer();
+
+void setGameMode(int gm);
+
+void drawFinalScreen(HDC hdc, int msg);
+
+void scanForVictory();

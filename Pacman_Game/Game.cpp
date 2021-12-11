@@ -22,6 +22,12 @@
 #define LEFT 4
 #define STOP 0
 
+#define MAX_NUM_RECORDS 10
+
+
+char SavePath[] = "Saves\\save.txt";
+char RecordsPath[] = "Saves\\records.txt";
+
 int map[HEIGHT][WIDTH] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1,
@@ -53,6 +59,34 @@ struct Ghost {
 	int onFoodFlag;
 };
 
+struct Player {
+	int x;
+	int y;
+	int direction;
+	int nextDirection;
+	char name[20];
+};
+
+struct Records {
+	char name[20];
+	int score;
+	unsigned int year;
+	unsigned int month;
+	unsigned int day;
+	unsigned int hour;
+	unsigned int minute;
+	unsigned int second;
+
+};
+
+int numRecords = 0;
+
+int recordDrawnFlag = 0;
+
+Records records[MAX_NUM_RECORDS + 1];
+
+Player player = { 9, 7, STOP, STOP};
+
 Ghost ghost1 = { 1, RIGHT, 0};
 Ghost ghost2 = { 2, UP, 0};
 Ghost ghost3 = { 3, UP, 0};
@@ -71,6 +105,34 @@ HFONT hFont = CreateFont(25,
 	0, 0, 0, 0,
 	L"Courier New"
 );
+
+
+void addRecord(char name[])
+{
+	//if (numRecords >= MAX_NUM_RECORDS) {
+	//numRecords = numRecords - 1;
+	//}
+
+	strcpy(records[numRecords].name, name);
+	records[numRecords].score = score;
+
+	SYSTEMTIME st;
+	// Получаем текущее время
+	GetLocalTime(&st);
+
+	// и разбрасываем его по полям в таблицу рекордов
+	records[numRecords].year = st.wYear;
+	records[numRecords].month = st.wMonth;
+	records[numRecords].day = st.wDay;
+
+	records[numRecords].hour = st.wHour;
+	records[numRecords].minute = st.wMinute;
+	records[numRecords].second = st.wSecond;
+	// Следующий раз будем записывать рекорд в следующий элемент	
+	numRecords++;
+}
+
+
 
 void DrawMap(HDC hdc) {
 	HBRUSH hBrushEmpty = CreateSolidBrush(RGB(0, 0, 0)); // кисть пустого поля - черный
@@ -111,25 +173,25 @@ void DrawMap(HDC hdc) {
 				FillRect(hdc, &object, hBrushEmpty);
 				FillRect(hdc, &movingObject, hBrushPlayer);
 			}
-			else if (map[i][j] == ENEMY1) { // Враг
+			else if (map[i][j] == ENEMY1) { // Враг 1
 				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
 							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
 				FillRect(hdc, &object, hBrushEmpty);
 				FillRect(hdc, &movingObject, hBrushEnemy1);
 			}
-			else if (map[i][j] == ENEMY2) {
+			else if (map[i][j] == ENEMY2) { // Враг 2
 				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
 							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
 				FillRect(hdc, &object, hBrushEmpty);
 				FillRect(hdc, &movingObject, hBrushEnemy2);
 			}
-			else if (map[i][j] == ENEMY3) {
+			else if (map[i][j] == ENEMY3) { // Враг 3
 				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
 							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
 				FillRect(hdc, &object, hBrushEmpty);
 				FillRect(hdc, &movingObject, hBrushEnemy3);
 			}
-			else if (map[i][j] == ENEMY4) {
+			else if (map[i][j] == ENEMY4) { // Враг 4
 				RECT movingObject = { j * objectSizeX + 10,       i * objectSizeY + 10,
 							(j + 1) * objectSizeX - 10, (i + 1) * objectSizeY - 10 };
 				FillRect(hdc, &object, hBrushEmpty);
@@ -170,85 +232,139 @@ void DrawMap(HDC hdc) {
 
 }
 
-void MoveLeft() {
+void savePlayerName(char* name) {
+	strcpy(player.name, name);
+}
+
+void drawMenu(HDC hdc) {
+	SetBkMode(hdc, TRANSPARENT);
+	HBRUSH hBrushMenu = CreateSolidBrush(RGB(0, 0, 0));
+	RECT screen = { 0, 0, 1000, 609 };
+	FillRect(hdc, &screen, hBrushMenu);
+	SelectObject(hdc, hFont);
+	SetTextColor(hdc, RGB(255, 255, 0));
+	TCHAR  scoreText[] = _T("PACMAN");
+	TextOut(hdc, 435, 100, (LPCWSTR)scoreText, _tcslen(scoreText));
+	DeleteObject(hBrushMenu);
+}
+
+
+void saveGame() {
+	FILE* save = fopen(SavePath, "wt");
+	for (int i = 0; i < HEIGHT; i++) {
+		for (int j = 0; j < WIDTH; j++) {
+			fprintf(save, "%d ", map[i][j]);
+		}
+		fprintf(save, "\n");
+	}
+	fprintf(save, "%d %d %d %d", player.x, player.y, player.direction, player.direction);
+	fprintf(save, "\n");
+	fprintf(save, "%d ", score);
+	fprintf(save, "%s", player.name);
+	fclose(save);
+}
+
+void loadGame() {
+	FILE* save = fopen(SavePath, "rt");
+	for (int i = 0; i < HEIGHT; i++) {
+		for (int j = 0; j < WIDTH; j++) {
+			fscanf(save, "%d", &map[i][j]);
+		}
+	}
+	fscanf(save, "%d %d %d %d", &player.x, &player.y, &player.direction, &player.direction);
+	fscanf(save, "%d %s", &score, &player.name);
+	fclose(save);
+}
+
+void tryChangePlayerDirection() {
+	switch (player.nextDirection)
+	{
+	case UP:
+		if (map[player.y - 1][player.x] == EMPTY || map[player.y - 1][player.x] == FOOD) {
+			player.direction = UP;
+			player.nextDirection = STOP;
+		}
+		break;
+	case RIGHT:
+		if (map[player.y][player.x + 1] == EMPTY || map[player.y][player.x + 1] == FOOD) {
+			player.direction = RIGHT;
+			player.nextDirection = STOP;
+		}
+		break;
+	case DOWN:
+		if (map[player.y + 1][player.x] == EMPTY || map[player.y + 1][player.x] == FOOD) {
+			player.direction = DOWN;
+			player.nextDirection = STOP;
+		}
+		break;
+	case LEFT:
+		if (map[player.y][player.x - 1] == EMPTY || map[player.y][player.x - 1] == FOOD) {
+			player.direction = LEFT;
+			player.nextDirection = STOP;
+		}
+		break;
+	case STOP:
+		break;
+	}
+}
+
+void setNextDirection(int nextDirection) {
+	player.nextDirection = nextDirection;
+}
+
+void movePlayer() {
 	int i = 0;
-	int j = 1;
+	int j = 0;
 	int stopSearchFlag = 0;
 	while (i < HEIGHT) {
 		j = 1;
 		while (j < WIDTH) {
 			if (map[i][j] == PLAYER) {
 				stopSearchFlag = 1;
-				if (map[i][j - 1] == WALL) break;
-				if (map[i][j - 1] == FOOD) score++;
-				map[i][j - 1] = PLAYER;
-				map[i][j] = EMPTY;
-				break;
-			}
-			j++;
-		}
-		if (stopSearchFlag == 1) break;
-		i++;
-	}
-}
-
-void MoveUp() {
-	int i = 1;
-	int j = 0;
-	int stopSearchFlag = 0;
-	while (i < HEIGHT) {
-		j = 0;
-		while (j < WIDTH) {
-			if (map[i][j] == PLAYER) {
-				stopSearchFlag = 1;
-				if (map[i - 1][j] == WALL) break;
-				if (map[i - 1][j] == FOOD) score++;
-				map[i - 1][j] = PLAYER;
-				map[i][j] = EMPTY;
-				break;
-			}
-			j++;
-		}
-		if (stopSearchFlag == 1) break;
-		i++;
-	}
-}
-
-void MoveRight() {
-	int i = 0;
-	int j = 0;
-	int stopSearchFlag = 0;
-	while (i < HEIGHT) {
-		j = 0;
-		while (j < WIDTH - 1) {
-			if (map[i][j] == PLAYER) {
-				stopSearchFlag = 1;
-				if (map[i][j + 1] == WALL) break;
-				if (map[i][j + 1] == FOOD) score++;
-				map[i][j + 1] = PLAYER;
-				map[i][j] = EMPTY;
-				break;
-			}
-			j++;
-		}
-		if (stopSearchFlag == 1) break;
-		i++;
-	}
-}
-
-void MoveDown() {
-	int i = 0;
-	int j = 0;
-	int stopSearchFlag = 0;
-	while (i < HEIGHT - 1) {
-		j = 0;
-		while (j < WIDTH) {
-			if (map[i][j] == PLAYER) {
-				stopSearchFlag = 1;
-				if (map[i + 1][j] == WALL) break;
-				if (map[i + 1][j] == FOOD) score++;
-				map[i + 1][j] = PLAYER;
-				map[i][j] = EMPTY;
+				switch (player.direction) {
+				case UP:
+					if (map[i - 1][j] == WALL) {
+						player.direction = STOP;
+						break;
+					}
+					if (map[i - 1][j] == FOOD) score++;
+					if (map[i - 1][j] < 4) map[i - 1][j] = PLAYER;
+					player.y--;
+					map[i][j] = EMPTY;
+					break;
+				case RIGHT:
+					if (map[i][j + 1] == WALL) {
+						player.direction = STOP;
+						break;
+					}
+					if (map[i][j + 1] == FOOD) score++;
+					if (map[i][j + 1] < 4) map[i][j + 1] = PLAYER;
+					player.x++;
+					map[i][j] = EMPTY;
+					break;
+				case DOWN:
+					if (map[i + 1][j] == WALL) {
+						player.direction = STOP;
+						break;
+					}
+					if (map[i + 1][j] == FOOD) score++;
+					if (map[i + 1][j] < 4) map[i + 1][j] = PLAYER;
+					player.y++;
+					map[i][j] = EMPTY;
+					break;
+				case LEFT:
+					if (map[i][j - 1] == WALL) {
+						player.direction = STOP;
+						break;
+					}
+					if (map[i][j - 1] == FOOD) score++;
+					if (map[i][j - 1] < 4) map[i][j - 1] = PLAYER;
+					player.x--;
+					map[i][j] = EMPTY;
+					break;
+				case STOP:
+					break;
+				}
 				break;
 			}
 			j++;
@@ -353,6 +469,154 @@ void ChangeGhostDirection(int ghostNum, int direction, int i, int j) {
 	ghosts[ghostNum - 4].direction = direction;
 }
 
+int CompareRecords(int index1, int index2)
+{
+	if (records[index1].score < records[index2].score)
+		return -1;
+	if (records[index1].score > records[index2].score)
+		return +1;
+
+
+	return 0;
+
+}
+
+
+void InsertRecord(char name[])
+{
+	strcpy(records[numRecords].name, name);
+	records[numRecords].score = score;
+
+	SYSTEMTIME st;
+	// Получаем текущее время
+	GetLocalTime(&st);
+
+	// и разбрасываем его по полям в таблицу рекордов
+	records[numRecords].year = st.wYear;
+	records[numRecords].month = st.wMonth;
+	records[numRecords].day = st.wDay;
+
+	records[numRecords].hour = st.wHour;
+	records[numRecords].minute = st.wMinute;
+	records[numRecords].second = st.wSecond;
+	int i = numRecords;
+	while (i > 0) {
+		if (CompareRecords(i - 1, i) < 0) {
+			Records temp = records[i];
+			records[i] = records[i - 1];
+			records[i - 1] = temp;
+		}
+		i--;
+	}
+	// Если таблица заполнена не полностью
+	if (numRecords < MAX_NUM_RECORDS)
+		// следующий раз новый рекорд будет занесен в новый элемент
+		numRecords++;
+}
+
+void saveRecords() {
+	FILE* save = fopen(RecordsPath, "wt");
+	fprintf(save, "%d\n", numRecords);
+	for (int i = 0; i < numRecords; i++) {
+		fprintf(save, "%d %d %d %d %d %d %s %d \n",
+			records[i].day, records[i].month, records[i].year,
+			records[i].hour, records[i].minute, records[i].second,
+			records[i].name, records[i].score
+		);
+	}
+	fclose(save);
+}
+
+void loadRecords() {
+	FILE* save = fopen(RecordsPath, "rt");
+	fscanf(save, "%d", &numRecords);
+	for (int i = 0; i < numRecords; i++) {
+		fscanf(save, "%d %d %d %d %d %d %s %d \n",
+			&records[i].day, &records[i].month, &records[i].year,
+			&records[i].hour, &records[i].minute, &records[i].second,
+			&records[i].name, &records[i].score
+		);
+		i++;
+	}
+	fclose(save);
+}
+
+void drawFinalScreen(HDC hdc, int msg) {
+	HBRUSH hBrushMenu = CreateSolidBrush(RGB(0, 0, 0));
+	RECT screen = { 0, 0, 1000, 609 };
+	FillRect(hdc, &screen, hBrushMenu);
+
+	HFONT hFont1;
+	hFont1 = CreateFont(16, 0, 0, 0, 0, 0, 0, 0,
+		DEFAULT_CHARSET, 0, 0, 0, 0,
+		L"Courier New"
+	);
+	SelectObject(hdc, hFont1);
+	SetTextColor(hdc, RGB(0, 64, 64));
+
+	if (msg == 0) {
+		TCHAR  string1[] = _T("Победа!");
+		TextOut(hdc, 160, 10, (LPCWSTR)string1, _tcslen(string1));
+	}
+	else {
+		TCHAR  string1[] = _T("Поражние!");
+		TextOut(hdc, 160, 10, (LPCWSTR)string1, _tcslen(string1));
+	}
+
+	TCHAR  string2[] = _T("! No ! Дата       ! Время    ! Имя                  !  Очки  !");
+	TextOut(hdc, 10, 50, (LPCWSTR)string2, _tcslen(string2));
+
+	if (!recordDrawnFlag) {
+		loadRecords();
+		InsertRecord(player.name);
+		saveRecords();
+	}
+	int i;
+	for (i = 0; i < numRecords; i++) {
+		TCHAR  string2[80];
+		char str[80];
+		sprintf(str, "! %2d ! %02d.%02d.%04d ! %02d:%02d:%02d ! %-20s ! %4d   !",
+			i + 1,
+			records[i].day, records[i].month, records[i].year,
+			records[i].hour, records[i].minute, records[i].second,
+			records[i].name, records[i].score
+		);
+		OemToChar(str, string2);
+		TextOut(hdc, 10, 24 * (i + 1) + 50, (LPCWSTR)string2, _tcslen(string2));
+	}
+	recordDrawnFlag = 1;
+	DeleteObject(hFont);
+	DeleteObject(hBrushMenu);
+}
+
+void scanForVictory() {
+	if (score == 100) {
+		setGameMode(2); //победа!!!
+	}
+}
+
+void scanForPlayer() {
+	int i = 0;
+	int j = 0;
+	int stopSearchFlag = 0;
+	while (i < HEIGHT) {
+		j = 0;
+		while (j < WIDTH) {
+			if (map[i][j] == PLAYER) {
+				stopSearchFlag = 1;
+				break;
+			}
+			j++;
+		}
+		if (stopSearchFlag) {
+			break;
+		}
+		i++;
+	}
+	if (!stopSearchFlag) { //gameOver
+		setGameMode(3);
+	}
+}
 
 void MoveGhosts() {
 	int i = 0;

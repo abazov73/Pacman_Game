@@ -7,15 +7,22 @@
 #include "Game.h"
 #include <stdio.h>
 
-
+#define UP 1
+#define RIGHT 2
+#define DOWN 3
+#define LEFT 4
+#define STOP 0
 #define MAX_LOADSTRING 100
-
+#define _CRT_SECURE_NO_WARNINGS
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
-
+int gameMode = 0; // 0 - меню
+                  // 1 - игра
+                  // 2 - финальнай экран (победа)
+                  // 3 - финальнай экран (поражение)
 
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -117,6 +124,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+
+void setGameMode(int gm) {
+    gameMode = gm;
+}
+
 //
 //  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -129,10 +141,26 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    static HWND hBtn; // дескриптор кнопки
+    static HWND hEdt1; // дескрипторы поля редактирования
+
     switch (message)
     {
     case WM_COMMAND:
         {
+        if (lParam == (LPARAM)hBtn) {
+            TCHAR StrT[20];
+            char str[20];
+            GetWindowText(hEdt1, StrT, sizeof(StrT));
+            wcstombs(str, StrT, 20);
+            SetFocus(hWnd);
+            gameMode = 1;
+            savePlayerName(str);
+            InvalidateRect(hWnd, NULL, TRUE);
+            DestroyWindow(hBtn);
+            DestroyWindow(hEdt1);
+        }
+        else {
             int wmId = LOWORD(wParam);
             // Разобрать выбор в меню:
             switch (wmId)
@@ -147,39 +175,78 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
         }
+        }
         break;
     case WM_CREATE:
-        SetTimer(hWnd, 1, 50, 0);
+        hInst = ((LPCREATESTRUCT)lParam)->hInstance; // дескриптор приложения
+        // Создаем и показываем поле редактирования - для ввода имени рекордсмена
+        hEdt1 = CreateWindowW(_T("edit"), _T("Noname"),
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_RIGHT, 400, 250, 160, 20,
+            hWnd, 0, hInst, NULL);
+        ShowWindow(hEdt1, SW_SHOWNORMAL);
+
+        // Создаем и показываем кнопку
+        hBtn = CreateWindowW(_T("button"), _T("Начать!"),
+            WS_CHILD | WS_VISIBLE | WS_BORDER,
+            400, 300, 160, 20, hWnd, 0, hInst, NULL);
+        ShowWindow(hBtn, SW_SHOWNORMAL);
+
+        SetTimer(hWnd, 1, 300, 0);
         srand(GetTickCount64());
         break;
     case WM_TIMER:
-        MoveGhosts();
+        if (gameMode == 1) {
+            MoveGhosts();
+            tryChangePlayerDirection();
+            movePlayer();
+            scanForVictory();
+            scanForPlayer();
+        }
         InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            DrawMap(hdc);
+            if (gameMode == 0) {
+                drawMenu(hdc);
+            }
+            else if (gameMode == 1) {
+                DrawMap(hdc);
+            }
+            else if (gameMode == 2) {
+                drawFinalScreen(hdc, 0);
+            }
+            else {
+                drawFinalScreen(hdc, 1);
+            }
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_KEYDOWN:
         switch (wParam) {
         case 0x41: // клавиша A
-            MoveLeft();
+            setNextDirection(LEFT);
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 0x57:
-            MoveUp(); // клавиша W
+            setNextDirection(UP); // клавиша W
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 0x44: // клавиша D
-            MoveRight();
+            setNextDirection(RIGHT);
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 0x53: // клавиша S
-            MoveDown();
+            setNextDirection(DOWN);
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case VK_F5: // клавиша F5
+            saveGame();
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case VK_F9: // клавиша F9
+            loadGame();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         }
