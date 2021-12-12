@@ -12,6 +12,12 @@
 #define DOWN 3
 #define LEFT 4
 #define STOP 0
+
+#define MENU 0
+#define GAMING 1
+#define VICTORY 2
+#define DEFEAT 3
+
 #define MAX_LOADSTRING 100
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -23,6 +29,11 @@ int gameMode = 0; // 0 - меню
                   // 1 - игра
                   // 2 - финальнай экран (победа)
                   // 3 - финальнай экран (поражение)
+
+static HWND hBtn; // дескриптор кнопки
+static HWND hEdt1; // дескрипторы поля редактирования
+
+int timeCounter = 0;
 
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -124,6 +135,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+void returnToNormalState() {
+    ShowWindow(hBtn, SW_SHOWNORMAL);
+    ShowWindow(hEdt1, SW_SHOWNORMAL);
+    gameMode = 0;
+}
+
 
 void setGameMode(int gm) {
     gameMode = gm;
@@ -141,24 +158,24 @@ void setGameMode(int gm) {
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    static HWND hBtn; // дескриптор кнопки
-    static HWND hEdt1; // дескрипторы поля редактирования
 
     switch (message)
     {
     case WM_COMMAND:
         {
         if (lParam == (LPARAM)hBtn) {
-            TCHAR StrT[20];
-            char str[20];
-            GetWindowText(hEdt1, StrT, sizeof(StrT));
-            wcstombs(str, StrT, 20);
-            SetFocus(hWnd);
-            gameMode = 1;
-            savePlayerName(str);
-            InvalidateRect(hWnd, NULL, TRUE);
-            DestroyWindow(hBtn);
-            DestroyWindow(hEdt1);
+            if (loadLevel(1, hWnd)) {
+                TCHAR StrT[20];
+                char str[20];
+                GetWindowText(hEdt1, StrT, sizeof(StrT));
+                wcstombs(str, StrT, 20);
+                SetFocus(hWnd);
+                gameMode = 1;
+                savePlayerName(str);
+                InvalidateRect(hWnd, NULL, TRUE);
+                ShowWindow(hBtn, SW_HIDE);
+                ShowWindow(hEdt1, SW_HIDE);
+            }
         }
         else {
             int wmId = LOWORD(wParam);
@@ -195,12 +212,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         srand(GetTickCount64());
         break;
     case WM_TIMER:
-        if (gameMode == 1) {
-            MoveGhosts();
+        if (gameMode == GAMING) {
             tryChangePlayerDirection();
             movePlayer();
+            MoveGhosts();
             scanForVictory();
             scanForPlayer();
+        }
+        else if (gameMode == VICTORY || gameMode == DEFEAT) {
+            timeCounter++;
+            if (timeCounter == 30) {
+                timeCounter = 0;
+                returnToNormalState();
+            }
         }
         InvalidateRect(hWnd, NULL, TRUE);
         break;
@@ -247,6 +271,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         case VK_F9: // клавиша F9
             loadGame();
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case VK_SPACE:
+            if (gameMode == VICTORY || gameMode == DEFEAT) {
+                timeCounter = 0;
+                returnToNormalState();
+            }
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         }

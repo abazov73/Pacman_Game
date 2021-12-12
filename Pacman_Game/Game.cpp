@@ -28,19 +28,9 @@
 char SavePath[] = "Saves\\save.txt";
 char RecordsPath[] = "Saves\\records.txt";
 
-int map[HEIGHT][WIDTH] = {
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1,
-	1, 3, 1, 1, 3, 1, 3, 1, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 3, 1,
-	1, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 1,
-	1, 3, 1, 3, 1, 1, 3, 1, 1, 5, 6, 1, 1, 3, 1, 1, 3, 1, 3, 1,
-	1, 3, 3, 3, 3, 3, 3, 1, 4, 0, 0, 7, 1, 3, 3, 3, 3, 3, 3, 1,
-	1, 3, 1, 3, 1, 1, 3, 1, 1, 1, 1, 1, 1, 3, 1, 1, 3, 1, 3, 1,
-	1, 3, 1, 3, 3, 3, 3, 3, 3, 2, 3, 3, 3, 3, 3, 3, 3, 1, 3, 1,
-	1, 3, 1, 1, 3, 1, 3, 1, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 3, 1,
-	1, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-};
+
+
+int map[HEIGHT][WIDTH];
 // 0 - свободно
 // 1 - стена
 // 2 - игрок
@@ -85,7 +75,7 @@ int recordDrawnFlag = 0;
 
 Records records[MAX_NUM_RECORDS + 1];
 
-Player player = { 9, 7, STOP, STOP};
+Player player;
 
 Ghost ghost1 = { 1, RIGHT, 0};
 Ghost ghost2 = { 2, UP, 0};
@@ -99,42 +89,15 @@ int objectSizeY = 50;
 
 int score = 1;
 
-HFONT hFont = CreateFont(25,
-	0, 0, 0, 0, 0, 0, 0,
-	DEFAULT_CHARSET,
-	0, 0, 0, 0,
-	L"Courier New"
-);
-
-
-void addRecord(char name[])
-{
-	//if (numRecords >= MAX_NUM_RECORDS) {
-	//numRecords = numRecords - 1;
-	//}
-
-	strcpy(records[numRecords].name, name);
-	records[numRecords].score = score;
-
-	SYSTEMTIME st;
-	// Получаем текущее время
-	GetLocalTime(&st);
-
-	// и разбрасываем его по полям в таблицу рекордов
-	records[numRecords].year = st.wYear;
-	records[numRecords].month = st.wMonth;
-	records[numRecords].day = st.wDay;
-
-	records[numRecords].hour = st.wHour;
-	records[numRecords].minute = st.wMinute;
-	records[numRecords].second = st.wSecond;
-	// Следующий раз будем записывать рекорд в следующий элемент	
-	numRecords++;
-}
-
 
 
 void DrawMap(HDC hdc) {
+	HFONT hFont = CreateFont(25,
+		0, 0, 0, 0, 0, 0, 0,
+		DEFAULT_CHARSET,
+		0, 0, 0, 0,
+		L"Courier New"
+	);
 	HBRUSH hBrushEmpty = CreateSolidBrush(RGB(0, 0, 0)); // кисть пустого поля - черный
 
 	HBRUSH hBrushWall = CreateSolidBrush(RGB(0, 0, 100)); // кисть стены - темно синий
@@ -237,6 +200,12 @@ void savePlayerName(char* name) {
 }
 
 void drawMenu(HDC hdc) {
+	HFONT hFont = CreateFont(25,
+		0, 0, 0, 0, 0, 0, 0,
+		DEFAULT_CHARSET,
+		0, 0, 0, 0,
+		L"Courier New"
+	);
 	SetBkMode(hdc, TRANSPARENT);
 	HBRUSH hBrushMenu = CreateSolidBrush(RGB(0, 0, 0));
 	RECT screen = { 0, 0, 1000, 609 };
@@ -245,6 +214,7 @@ void drawMenu(HDC hdc) {
 	SetTextColor(hdc, RGB(255, 255, 0));
 	TCHAR  scoreText[] = _T("PACMAN");
 	TextOut(hdc, 435, 100, (LPCWSTR)scoreText, _tcslen(scoreText));
+	DeleteObject(hFont);
 	DeleteObject(hBrushMenu);
 }
 
@@ -271,7 +241,7 @@ void loadGame() {
 			fscanf(save, "%d", &map[i][j]);
 		}
 	}
-	fscanf(save, "%d %d %d %d", &player.x, &player.y, &player.direction, &player.direction);
+	fscanf(save, "%d %d %d %d", &player.x, &player.y, &player.direction, &player.nextDirection);
 	fscanf(save, "%d %s", &score, &player.name);
 	fclose(save);
 }
@@ -536,7 +506,6 @@ void loadRecords() {
 			&records[i].hour, &records[i].minute, &records[i].second,
 			&records[i].name, &records[i].score
 		);
-		i++;
 	}
 	fclose(save);
 }
@@ -556,20 +525,21 @@ void drawFinalScreen(HDC hdc, int msg) {
 
 	if (msg == 0) {
 		TCHAR  string1[] = _T("Победа!");
-		TextOut(hdc, 160, 10, (LPCWSTR)string1, _tcslen(string1));
+		TextOut(hdc, 250, 10, (LPCWSTR)string1, _tcslen(string1));
 	}
 	else {
-		TCHAR  string1[] = _T("Поражние!");
+		TCHAR  string1[] = _T("Поражение!");
 		TextOut(hdc, 160, 10, (LPCWSTR)string1, _tcslen(string1));
 	}
 
 	TCHAR  string2[] = _T("! No ! Дата       ! Время    ! Имя                  !  Очки  !");
-	TextOut(hdc, 10, 50, (LPCWSTR)string2, _tcslen(string2));
+	TextOut(hdc, 100, 50, (LPCWSTR)string2, _tcslen(string2));
 
 	if (!recordDrawnFlag) {
 		loadRecords();
 		InsertRecord(player.name);
 		saveRecords();
+		score = 0;
 	}
 	int i;
 	for (i = 0; i < numRecords; i++) {
@@ -582,10 +552,10 @@ void drawFinalScreen(HDC hdc, int msg) {
 			records[i].name, records[i].score
 		);
 		OemToChar(str, string2);
-		TextOut(hdc, 10, 24 * (i + 1) + 50, (LPCWSTR)string2, _tcslen(string2));
+		TextOut(hdc, 100, 24 * (i + 1) + 50, (LPCWSTR)string2, _tcslen(string2));
 	}
 	recordDrawnFlag = 1;
-	DeleteObject(hFont);
+	DeleteObject(hFont1);
 	DeleteObject(hBrushMenu);
 }
 
@@ -814,4 +784,26 @@ void MoveGhosts() {
 		map[5][11] = ENEMY4;
 		ghosts[3].onFoodFlag = 0;
 	}
+}
+
+int loadLevel(int levelNum, HWND hWnd) {
+	char num = levelNum + '0';
+	char levelPath[] = {'L','e','v','e','l','s','\\','L','e','v','e','l', num ,'.','t','x','t', '\0'};
+	FILE* level = fopen(levelPath, "rt");
+	if (level == NULL) {
+		MessageBoxA(hWnd, (LPCSTR)"Неверно открытый файл!", (LPCSTR)"Ошибка!", MB_OK);
+		return 0;
+	}
+	for (int i = 0; i < HEIGHT; i++) {
+		for (int j = 0; j < WIDTH; j++) {
+			fscanf(level, "%d", &map[i][j]);
+		}
+	}
+	fscanf(level, "%d %d %d %d", &player.x, &player.y, &player.direction, &player.nextDirection);
+	fscanf(level, "%d %d %d %d", &ghosts[0].direction, &ghosts[1].direction, &ghosts[2].direction, &ghosts[3].direction);
+	ghosts[0].onFoodFlag = 0;
+	ghosts[1].onFoodFlag = 0;
+	ghosts[2].onFoodFlag = 0;
+	ghosts[3].onFoodFlag = 0;
+	return 1;
 }

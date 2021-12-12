@@ -27,3 +27,7 @@ void setGameMode(int gm);
 void drawFinalScreen(HDC hdc, int msg);
 
 void scanForVictory();
+
+void returnToNormalState();
+
+int loadLevel(int levelNum, HWND hWnd);
